@@ -319,7 +319,7 @@ namespace Trabalho_DM106.Controllers
         }
 
         // POST api/Account/Register
-        [AllowAnonymous]
+        [Authorize(Roles = "ADMIN")]
         [Route("Register")]
         public async Task<IHttpActionResult> Register(RegisterBindingModel model)
         {
@@ -335,6 +335,15 @@ namespace Trabalho_DM106.Controllers
             if (!result.Succeeded)
             {
                 return GetErrorResult(result);
+            }
+            else
+            {
+                var addToRoleResult = await UserManager.AddToRoleAsync(user.Id, "USER");
+
+                if(!addToRoleResult.Succeeded)
+                {
+                    return GetErrorResult(result);
+                }
             }
 
             return Ok();
