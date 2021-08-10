@@ -43,6 +43,12 @@ namespace Trabalho_DM106.Controllers
         [ResponseType(typeof(void))]
         public IHttpActionResult PutProduct(int id, Product product)
         {
+            IEnumerable<Product> productExist = db.Products.Where(c => ((c.code == product.code || c.model == product.model) && c.Id != id));
+            if (productExist.Any())
+            {
+                return BadRequest();
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -79,6 +85,12 @@ namespace Trabalho_DM106.Controllers
         [ResponseType(typeof(Product))]
         public IHttpActionResult PostProduct(Product product)
         {
+            IEnumerable<Product> productExist = db.Products.Where(c => (c.code == product.code || c.model == product.model));
+            if (productExist.Any())
+            {
+                return BadRequest();
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
