@@ -207,6 +207,7 @@
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\OrdersController.cs" />
     <Compile Include="Controllers\ProductsController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
     <Compile Include="Data\Trabalho_DM106Context.cs" />
@@ -217,10 +218,15 @@
     <Compile Include="Migrations\202108030117589_Initial.Designer.cs">
       <DependentUpon>202108030117589_Initial.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202108122343222_AddOrderAndOrderIntem.cs" />
+    <Compile Include="Migrations\202108122343222_AddOrderAndOrderIntem.Designer.cs">
+      <DependentUpon>202108122343222_AddOrderAndOrderIntem.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AccountBindingModels.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
     <Compile Include="Models\IdentityModels.cs" />
+    <Compile Include="Models\Order.cs" />
     <Compile Include="Models\OrderItem.cs" />
     <Compile Include="Models\Product.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -320,6 +326,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Migrations\202108030117589_Initial.resx">
       <DependentUpon>202108030117589_Initial.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202108122343222_AddOrderAndOrderIntem.resx">
+      <DependentUpon>202108122343222_AddOrderAndOrderIntem.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

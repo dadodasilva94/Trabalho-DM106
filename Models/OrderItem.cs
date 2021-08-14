@@ -11,10 +11,10 @@ namespace Trabalho_DM106.Models
 
         public int amount { get; set; }
 
-        public int productId { get; set; }
+        public int ProductId { get; set; }
 
-        public int orderId { get; set; }
+        public int OrderId { get; set; }
 
-        public Product productInfo { get; set; }
+        public virtual Product Product { get; set; }
     }
 }
