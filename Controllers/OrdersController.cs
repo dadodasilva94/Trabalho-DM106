@@ -14,15 +14,16 @@ using Trabalho_DM106.Models;
 
 namespace Trabalho_DM106.Controllers
 {
+    [RoutePrefix("api/orders")]
     public class OrdersController : ApiController
     {
         private Trabalho_DM106Context db = new Trabalho_DM106Context();
 
         // GET: api/Orders
         [Authorize (Roles = "ADMIN")]
-        public List<Order> GetOrders()
+        public IQueryable<Order> GetOrders()
         {
-            return db.Orders.Include(order => order.OrderItems).ToList();
+            return db.Orders;
         }
 
         // GET: api/Orders/5
@@ -32,13 +33,16 @@ namespace Trabalho_DM106.Controllers
         {
             Order order = db.Orders.Find(id);
 
-            if (checkOrderOwner(User, order.email))
+            if (order == null)
             {
-                if (order == null)
-                {
-                    return NotFound();
-                }
-
+                return NotFound();
+            }
+            if ((order.email == null) || order.email.Length == 0)
+            {
+                return BadRequest();
+            }
+            if (checkOrderOwnerByOrder(User, order))
+            {
                 return Ok(order);
             }
             else
@@ -47,20 +51,24 @@ namespace Trabalho_DM106.Controllers
             }
         }
 
-        //GET: api/orders/email
-        [Authorize]
         [ResponseType(typeof(Order))]
-
+        [Authorize]
+        [HttpGet]
+        [Route("byemail")]
         public IHttpActionResult GetOrderEmail(string email)
         {
             var orders = db.Orders.Where(o => o.email == email);
-            if (checkOrderOwner(User, email))
-            {
-                if(orders == null)
-                {
-                    return NotFound();
-                }
 
+            if (orders == null)
+            {
+                return NotFound();
+            }
+            if (!orders.Any())
+            {
+                return BadRequest();
+            }
+            if (checkOrderOwnerByEmail(User, email))
+            {
                 return Ok(orders);
             }
             else
@@ -131,13 +139,16 @@ namespace Trabalho_DM106.Controllers
         {
             Order order = db.Orders.Find(id);
 
-            if (checkOrderOwner(User, order.email))
+            if (order == null)
             {
-                if (order == null)
-                {
-                    return NotFound();
-                }
-
+                return NotFound();
+            }
+            if ((order.email == null) || order.email.Length == 0)
+            {
+                return BadRequest();
+            }
+            if (checkOrderOwnerByOrder(User, order))
+            {
                 db.Orders.Remove(order);
                 db.SaveChanges();
 
@@ -163,9 +174,14 @@ namespace Trabalho_DM106.Controllers
             return db.Orders.Count(e => e.Id == id) > 0;
         }
 
-        private bool checkOrderOwner(IPrincipal user, string email)
+        private bool checkOrderOwnerByEmail(IPrincipal user, string email)
         {
             return ((user.Identity.Name.Equals(email)) || (user.IsInRole("ADMIN")));
+        }
+
+        private bool checkOrderOwnerByOrder(IPrincipal user, Order order)
+        {
+            return ((user.Identity.Name.Equals(order.email)) || (user.IsInRole("ADMIN")));
         }
     }
 }
