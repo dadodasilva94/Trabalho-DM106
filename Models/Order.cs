@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Web;
 
@@ -12,6 +13,7 @@ namespace Trabalho_DM106.Models
             this.OrderItems = new HashSet<OrderItem>();
         }
         public int Id { get; set; }
+        [Required(ErrorMessage = "O campo é obrigatório!")]
         public String email { get; set; }
 
         public DateTime orderData { get; set; }
