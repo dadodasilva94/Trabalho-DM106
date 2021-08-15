@@ -11,6 +11,8 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using Trabalho_DM106.Data;
 using Trabalho_DM106.Models;
+using Trabalho_DM106.br.com.correios.ws;
+using TraballhoDM106.CRMClient;
 
 namespace Trabalho_DM106.Controllers
 {
@@ -75,6 +77,158 @@ namespace Trabalho_DM106.Controllers
             {
                 return StatusCode(HttpStatusCode.Forbidden);
             }
+        }
+
+        [Authorize]
+        [HttpPut]
+        [Route("caulafrete")]
+        public IHttpActionResult CalculaFrete(int id)
+        {
+            Order order = db.Orders.Find(id);
+            if(order == null)
+            {
+                return BadRequest();
+            }
+            if(!checkOrderOwnerByOrder(User, order))
+            {
+                return StatusCode(HttpStatusCode.Forbidden);
+            }
+
+            string cepOrigem = "37584000";
+            string frete;
+            string cepDest;
+            decimal peso = 0;
+            int forma = 1;
+            decimal comprimento = 0;
+            decimal altura = 0;
+            decimal largura = 0;
+            decimal diamentro = 0;
+            string entregaMaoPropria = "N";
+            string avisoRecebimento = "S";
+            decimal shipping;
+
+            if(order.OrderItems.Count == 0)
+            {
+                return BadRequest("Pedido sem itens!");
+            }
+
+            ICollection<OrderItem> produtos = order.OrderItems;
+            CRMRestClient clienteCrm = new CRMRestClient();
+            Customer customer = clienteCrm.GetCustomerByEmail(User.Identity.Name);
+
+            if(customer != null)
+            {
+                cepDest = customer.zip;
+            }
+            else
+            {
+                return BadRequest("Falha ao consultar CRM");
+            }
+
+            if(!order.status.Equals("Novo"))
+            {
+                BadRequest("Pedido com STATUS diferente de Novo");
+            }
+
+            foreach(OrderItem item in produtos)
+            {
+                Product product = db.Products.Find(item.ProductId);
+
+                peso = (item.amount * product.weight) + peso;
+                largura = (item.amount * product.widht) + largura;
+                comprimento = (item.amount * product.lenght) + comprimento;
+                altura = (item.amount * product.height) + altura;
+                diamentro = (item.amount + product.diameter) + diamentro;
+                order.totalPrice = (item.amount * order.totalPrice) + product.price;
+            }
+            order.totalWeight = peso;
+
+            CalcPrecoPrazoWS correiosServ = new CalcPrecoPrazoWS();
+            cResultado resultado = correiosServ.CalcPrecoPrazo("", "", "40010", cepOrigem, cepDest, Convert.ToString(peso), forma, Decimal.ToInt32(comprimento), 
+                Decimal.ToInt32(altura), Decimal.ToInt32(largura), Decimal.ToInt32(diamentro), entregaMaoPropria, Decimal.ToInt32(order.totalPrice), avisoRecebimento);
+
+            if(resultado.Servicos[0].Erro.Equals("0"))
+            {
+                frete = "Valor do frente: " + resultado.Servicos[0].Valor + " - Prazo de entrega: " + resultado.Servicos[0].PrazoEntrega + " dia(s)";
+                shipping = Convert.ToDecimal(resultado.Servicos[0].Valor);
+                order.deliveryData = order.orderData.AddDays(Int32.Parse(resultado.Servicos[0].PrazoEntrega));
+            }
+            else
+            {
+                return BadRequest("Erro dos correios: " + resultado.Servicos[0].Erro + " - Mensagem de erro: " + resultado.Servicos[0].MsgErro);
+            }
+
+            if(id != order.Id)
+            {
+                return BadRequest();
+            }
+
+            order.shippingPrice = shipping;
+            db.Entry(order).State = EntityState.Modified;
+
+            try 
+            {
+                db.SaveChanges();
+            }
+            catch(DbUpdateConcurrencyException)
+            {
+                if(!OrderExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        [Authorize]
+        [HttpPut]
+        [Route("closeorder")]
+        public IHttpActionResult closeOrder(int id)
+        {
+            Order order = db.Orders.Find(id);
+
+            if(order == null)
+            {
+                return NotFound();
+            }
+            if(!checkOrderOwnerByOrder(User, order))
+            {
+                return StatusCode(HttpStatusCode.Forbidden);
+            }
+            if(!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            if(order.shippingPrice == 0)
+            {
+                return BadRequest("É necessário calcular o frete");
+            }
+            order.status = "Fechado";
+
+            db.Entry(order).State = EntityState.Modified;
+
+            try
+            {
+                db.SaveChanges();
+            }
+            catch(DbUpdateConcurrencyException)
+            {
+                if(!OrderExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            return StatusCode(HttpStatusCode.NoContent);
         }
 
         // PUT: api/Orders/5
