@@ -23,9 +23,9 @@ namespace Trabalho_DM106.Controllers
 
         // GET: api/Orders
         [Authorize (Roles = "ADMIN")]
-        public IQueryable<Order> GetOrders()
+        public List<Order> GetOrders()
         {
-            return db.Orders;
+            return db.Orders.Include(order => order.OrderItems).ToList();
         }
 
         // GET: api/Orders/5
