@@ -85,15 +85,8 @@ namespace Trabalho_DM106.Controllers
         public IHttpActionResult CalculaFrete(int id)
         {
             Order order = db.Orders.Find(id);
-            if(order == null)
-            {
-                return BadRequest();
-            }
-            if(!checkOrderOwnerByOrder(User, order))
-            {
-                return StatusCode(HttpStatusCode.Forbidden);
-            }
 
+            /*Váriaveis de controle*/
             string cepOrigem = "37584000";
             string frete;
             string cepDest;
@@ -107,6 +100,19 @@ namespace Trabalho_DM106.Controllers
             string avisoRecebimento = "S";
             decimal shipping;
 
+            /*Valida se o pedido existe*/
+            if (order == null)
+            {
+                return BadRequest();
+            }
+
+            /*Válida se o usuário autenticado tem permissão para acessar o pedido*/
+            if(!checkOrderOwnerByOrder(User, order))
+            {
+                return StatusCode(HttpStatusCode.Forbidden);
+            }
+
+            /*Válida se o pedido não está vazio*/
             if(order.OrderItems.Count == 0)
             {
                 return BadRequest("Pedido sem itens!");
@@ -116,6 +122,7 @@ namespace Trabalho_DM106.Controllers
             CRMRestClient clienteCrm = new CRMRestClient();
             Customer customer = clienteCrm.GetCustomerByEmail(User.Identity.Name);
 
+            /*Valida email do usuário, utilizando CRM*/
             if(customer != null)
             {
                 cepDest = customer.zip;
@@ -125,10 +132,12 @@ namespace Trabalho_DM106.Controllers
                 return BadRequest("Falha ao consultar CRM");
             }
 
+            /*Válida se é um pedido novo*/
             if(!order.status.Equals("Novo"))
             {
                 BadRequest("Pedido com STATUS diferente de Novo");
             }
+
 
             foreach(OrderItem item in produtos)
             {
@@ -144,6 +153,8 @@ namespace Trabalho_DM106.Controllers
             order.totalWeight = peso;
 
             CalcPrecoPrazoWS correiosServ = new CalcPrecoPrazoWS();
+
+            /*Calculo do frete*/
             cResultado resultado = correiosServ.CalcPrecoPrazo("", "", "40010", cepOrigem, cepDest, Convert.ToString(peso), forma, Decimal.ToInt32(comprimento), 
                 Decimal.ToInt32(altura), Decimal.ToInt32(largura), Decimal.ToInt32(diamentro), entregaMaoPropria, Decimal.ToInt32(order.totalPrice), avisoRecebimento);
 
@@ -192,10 +203,13 @@ namespace Trabalho_DM106.Controllers
         {
             Order order = db.Orders.Find(id);
 
+            /*Valida se existe o Pedido*/
             if(order == null)
             {
                 return NotFound();
             }
+
+            /*Valida se o usuário tem permissão para acessar o pedido*/
             if(!checkOrderOwnerByOrder(User, order))
             {
                 return StatusCode(HttpStatusCode.Forbidden);
@@ -205,6 +219,7 @@ namespace Trabalho_DM106.Controllers
                 return BadRequest();
             }
 
+            /*Valida se já foi calculado o frete*/
             if(order.shippingPrice == 0)
             {
                 return BadRequest("É necessário calcular o frete");
@@ -228,41 +243,6 @@ namespace Trabalho_DM106.Controllers
                     throw;
                 }
             }
-            return StatusCode(HttpStatusCode.NoContent);
-        }
-
-        // PUT: api/Orders/5
-        [ResponseType(typeof(void))]
-        public IHttpActionResult PutOrder(int id, Order order)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (id != order.Id)
-            {
-                return BadRequest();
-            }
-
-            db.Entry(order).State = EntityState.Modified;
-
-            try
-            {
-                db.SaveChanges();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!OrderExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
             return StatusCode(HttpStatusCode.NoContent);
         }
 
