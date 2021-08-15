@@ -6,6 +6,7 @@ using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Principal;
 using System.Web.Http;
 using System.Web.Http.Description;
 using Trabalho_DM106.Data;
@@ -30,12 +31,43 @@ namespace Trabalho_DM106.Controllers
         public IHttpActionResult GetOrder(int id)
         {
             Order order = db.Orders.Find(id);
-            if (order == null)
-            {
-                return NotFound();
-            }
 
-            return Ok(order);
+            //Verifica dono do produto
+            if (checkOrderOwner(User, order.email))
+            {
+                if (order == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(order);
+            }
+            else
+            {
+                return StatusCode(HttpStatusCode.Forbidden);
+            }
+        }
+
+        //GET: api/orders/email
+        [Authorize]
+        [ResponseType(typeof(Order))]
+
+        public IHttpActionResult GetOrderEmail(string email)
+        {
+            var orders = db.Orders.Where(o => o.email == email);
+            if (checkOrderOwner(User, email))
+            {
+                if(orders == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(orders);
+            }
+            else
+            {
+                return StatusCode(HttpStatusCode.Forbidden);
+            }
         }
 
         // PUT: api/Orders/5
@@ -74,14 +106,20 @@ namespace Trabalho_DM106.Controllers
         }
 
         // POST: api/Orders
+        [Authorize]
         [ResponseType(typeof(Order))]
         public IHttpActionResult PostOrder(Order order)
         {
+            order.status = "Novo";
+            order.totalWeight = 0;
+            order.shippingPrice = 0;
+            order.totalPrice = 0;
+            order.orderData = DateTime.Now;
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-
+            
             db.Orders.Add(order);
             db.SaveChanges();
 
@@ -116,6 +154,11 @@ namespace Trabalho_DM106.Controllers
         private bool OrderExists(int id)
         {
             return db.Orders.Count(e => e.Id == id) > 0;
+        }
+
+        private bool checkOrderOwner(IPrincipal user, string email)
+        {
+            return ((user.Identity.Name.Equals(email)) || (user.IsInRole("ADMIN")));
         }
     }
 }
