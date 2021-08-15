@@ -32,7 +32,6 @@ namespace Trabalho_DM106.Controllers
         {
             Order order = db.Orders.Find(id);
 
-            //Verifica dono do produto
             if (checkOrderOwner(User, order.email))
             {
                 if (order == null)
@@ -131,15 +130,23 @@ namespace Trabalho_DM106.Controllers
         public IHttpActionResult DeleteOrder(int id)
         {
             Order order = db.Orders.Find(id);
-            if (order == null)
+
+            if (checkOrderOwner(User, order.email))
             {
-                return NotFound();
+                if (order == null)
+                {
+                    return NotFound();
+                }
+
+                db.Orders.Remove(order);
+                db.SaveChanges();
+
+                return Ok(order);
             }
-
-            db.Orders.Remove(order);
-            db.SaveChanges();
-
-            return Ok(order);
+            else
+            {
+                return StatusCode(HttpStatusCode.Forbidden);
+            }
         }
 
         protected override void Dispose(bool disposing)
